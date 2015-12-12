@@ -69,7 +69,7 @@ void create_table(char *filename,sqlite3 *db,char *table)
 		fprintf(stderr,"can't open database %s\n",sqliste3_errmsg(db));
 		sqlite3_close(db);
 	}
-	sql=sqlite3_myprintf("create table %s (FD INT PRIMARY KEY NOT NULL,
+	sql=sqlite3_myprintf("create table %s (FD INT PRIMARY KEY,
 	NAME TEXT,ID TEXT,PHONENUMBER TEXT,SEX CHAR,FLAG INT,INFO_TYPE INT)",table);
 	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK)
 		{
@@ -80,7 +80,7 @@ void create_table(char *filename,sqlite3 *db,char *table)
 	return;
 }
 //插入数据库
-void insert_data(sqlite3 *db,struct client_info *umsg,char *table)
+int insert_data(sqlite3 *db,struct client_info *umsg,char *table)
 {
 		pr_debug("-----(%s:%d)|instert_data()------\n",__func__,__LINE__);
 
@@ -90,12 +90,12 @@ void insert_data(sqlite3 *db,struct client_info *umsg,char *table)
 		if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK)
 		{
 				pr_debug("sqlite3_exec\n");
-				exit(-1);
+				return -1;
 		}else
 				pr_debug("-----(%s:%d)insert success!-----\n",__func__,__LINE__);
 		sqlite3_free(sql);
 
-		return;
+		return 0;
 }
 
 //删除表中已有的记录
@@ -168,14 +168,20 @@ void show_data(sqlite3 *db,char *table)
 		return;
 }
 
-//根据ID查询该ID下的客户信息
-void search_by_id(char *table,sqlite3 *db,char *id,struct client_info *umsg)
+//根据fd或id查询客户信息
+void search_by_type(char *table,sqlite3 *db,int *fd,char *ID,struct client_info *umsg)
 {
 		char *sql;
-
-		bzero(umsg,sizeof(struct client_info));
-		sql=sqlite3_mprintf("select * form %s where id=%s",table,id);
-		if(sqlite3_exec(db,sql,&sqlite_callback,(void *)umsg,&errmsg)!=)SQLITE_OK)
+		void *id;
+		if(*fd!=NULL){
+		(int *)id=fd;
+		sql=sqlite3_mprintf("select * form %s where FD=%d",table,id);
+		}
+		if(*ID!=NULL){
+		(char *)id=ID;
+		sql=sqlite3_mprintf("select * form %s where ID=%s",table,id);
+		}
+		if(sqlite3_exec(db,sql,&sqlite_callback,(void *)umsg,&errmsg)!=SQLITE_OK)
 		{
 				pr_debug("sqlite3_exec_search\n");
 				exit(-1);

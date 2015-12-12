@@ -1,0 +1,53 @@
+
+
+#include "../debug.h"
+
+
+
+
+//回复用户数据
+int call_back_usr(int fd，char *msg)
+{
+		while(1){
+					do{
+						ret=write(client->newfd,msg,strlen(msg));
+					}while(ret < 0 && EINTR == errno);
+					if(ret < 0) {
+						pr_debug("write to socket error");
+						continue;
+					}
+					break;		
+				}
+	return 0;
+}
+//分析数据类型，进行相关操作
+void anl_data(struct client_info *client)
+{
+	
+		if(client->info_type==LOG_IN)
+		{// 登入
+			//遍历数据库，看是否存在该用户
+			struct client_info *umsg;
+			umsg = (struct client_info*)malloc(sizeof(struct client_info));
+			seartch_by_type(table,db,client->newfd,umsg);
+			if(umsg->newfd==client->newfd)
+			{
+				pr_debug("%s:%s --登入成功\n",client->name,client->ID);
+
+				//写回数据，告诉用户登入成功
+				if(call_back_usr(client->newfd,OK)==0)
+				{
+					pr_debug("写回数据成功\n");
+				}
+			}else
+			{
+					pr_debug("%s:%s --登入失败\n",client->name,client->ID);
+					if(call_back_usr(client->newfd,FAILU)==0)
+				{
+					pr_debug("写回数据成功\n");
+				}
+			}
+			
+			continue;
+		}
+}

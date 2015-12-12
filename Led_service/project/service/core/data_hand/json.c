@@ -1,16 +1,42 @@
-#include <debug.h>
+#include "../debug.h"
 #include </usr/local/include/json/json.h>
 
 
-
+typedef struct json_object*  json_object;
+int json_obect_long=sizeof(struct json_object);
+//Json_object 初始化
+void init_jison_object(json_object fat,json_object json_client_id,json_object json_phone_num,json_object json_sex,
+									json_object json_name,json_object json_sex,json_object json_info_type,json_object json_flag,json_object json_led)
+{
+	fat=(json_object)malloc(fat,json_obect_long);
+	*fat=NULL;
+	json_client_id=(json_object)malloc(json_client_id,json_obect_long);
+	*json_client_id=NULL;
+	json_phone_num=(json_object)malloc(json_phone_num,json_obect_long);
+	*json_phone_num=NULL;
+	json_sex=(json_object)malloc(json_sex,json_obect_long);
+	*json_sex=NULL;
+	json_name=(json_object)malloc(json_name,json_obect_long);
+	*json_name=NULL;
+	json_sex=(json_object)malloc(json_sex,json_obect_long);
+	*json_sex=NULL;
+	json_info_type=(json_object)malloc(json_info_type,json_obect_long);
+	*json_info_type=NULL;
+	json_flag=(json_object)malloc(json_flag,json_obect_long);
+	*json_flag=NULL;
+	json_led=(json_object)malloc(json_led,json_obect_long);
+	*json_led=NULL;
+}
 
 //Json 打包
 void insert_task(int fd,struct client_info *umsg,char *buf)
 {
 	pr_debug("send insert task message\n");
-	printf("fd : %d,client:%s,ID: %s,phonenumber:%s,sex:%s,info_type:%d,flag:%d\n",fd,umsg->name,umsg->ID,umsg->phonenumber,umsge->sex,umsg->info_type,umsg->flag);
+	printf("fd : %d,client:%s,ID: %s,phonenumber:%s,sex:%s,info_type:%d,flag:%d,led:%d\n",fd,umsg->name,umsg->ID,umsg->phonenumber,umsge->sex,umsg->info_type,umsg->flag,umsg->led);
 
-	struct json_object *fat,*json_client_id,*json_phone_num,*json_name,*json_sex,*json_info_type,*json_flag;
+	struct json_object *fat,*json_client_id,*json_phone_num,*json_name,*json_sex,*json_info_type,*json_flag,json_object *json_led;
+	init_jison_object(fat, json_client_id, json_phone_num, json_sex,
+					json_name, json_sex, json_info_type, json_flag, json_led)
 	//创建一个JSON对象
 	fat=json_object_new_object();
 	
@@ -39,7 +65,10 @@ void insert_task(int fd,struct client_info *umsg,char *buf)
 	json_flag=json_object_new_int(umsg->flag);
 	json_object_object_add(fat,"flag",json_flag);
 	}
-
+	if(umsg->led!=-1){
+		json_led=json_object_new_int(umsg->flag);
+		json_object_object_add(fata,"led",json_flag);
+	}
 	//把json对象转换成字符串
 	buf=json_object_to_json_string(fat);
 	pr_debug("---------(%s:%d)--------\n");
@@ -51,7 +80,9 @@ void insert_task(int fd,struct client_info *umsg,char *buf)
 void unpack_data(const char *buf,struct client_info *umsg)
 {
 	int i;
-	struct json_object *json_bao,*json_client_id,*json_phone_num,*json_name,*json_sex,*json_info_type,*json_flag;
+	struct json_object *json_bao,*json_client_id,*json_phone_num,*json_name,*json_sex,*json_info_type,*json_flag,*json_led;
+	init_jison_object(json_bao, json_client_id, json_phone_num, json_sex,
+					json_name, json_sex, json_info_type, json_flag, json_led)
 	//把字符串转换成JSON对象
 	json_bao=json_tokener_parse(buf);
 	//通过键值获取json成员
@@ -90,5 +121,11 @@ void unpack_data(const char *buf,struct client_info *umsg)
 	{
 		umsg->flag=json_object_get_int(json_flag);
 		pr_debug("----(%s:%d):%d------\n",__func__,__LINE__,umsg->flag);
+	}
+	json_led=json_object_object_get_int(json_bao,"led");
+	if(json_flag!=NULL)
+	{
+		umsg->led=json_object_get_int(json_led);
+		pr_debug("---(%s:%d):%d-----\n",__func__,__LINE__,umsg->led);
 	}
 }

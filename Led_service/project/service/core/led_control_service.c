@@ -5,66 +5,92 @@
 
 
 int fd = -1;
+char *filname="led.db";
+char *table="LEDSQLITE";
+sqlite3 *db;
+char buf[BUFSIZE];
+int ret=-1;
 
 void *client_pthread(void *arg)
 {
 	struct client_info client =*(struct client_info *)arg;
 	char buf[BUFSIZE];
-	int ret;
 
-	bzero(buf,BUFSIZE);
-	do{
-		pr_debug("----read starting----\n");
-		ret=read(client.newfd,buf,BUFSIZE-1);
-	}while(ret<0&&EINTR==errno);
-	if(ret<0)
-	{
-		pr_debug("----read error----\n");
-		return;
+
+	while(1){
+		bzero(buf,BUFSIZE);
+		do{
+			pr_debug("----read starting----\n");
+			ret=read(client.newfd,buf,BUFSIZE-1);
+		}while(ret<0&&EINTR==errno);
+		if(ret<0)
+		{
+			pr_debug("----read error----\n");
+			return;
+		}
+		if(ret==0)
+		{
+			pr_debug ("Client(%s:%d) is exited.", client.cli_ip_addr, ntohs (client.cin.sin_port));
+		}
+
+		//Ω‚Œˆ ˝æ›
+		unpack_data(buf,&client);
+		//∑÷Œˆ ˝æ›
+		ret=anl_data(client);
+		if(ret)
+		{
+		  pr_debug("ºÃ–¯—≠ª∑£¨µ»¥˝”√ªß ˝æ›£°\n");
+		  continue;
+		}else{
+			close(client->newfd);
+			pthread_exit(NULL);
+		}
+		
+		
+
 	}
-	if(ret==0)
-	{
-		pr_debug ("Client(%s:%d) is exited.", client.cli_ip_addr, ntohs (client.cin.sin_port));
-	}
 
-	//Ω‚Œˆ ˝æ›
-	unpackage(buf,&client);
-
-	//≈–∂œ–≈œ¢∫Õ¥¶¿Ì–≈œ¢
-	judge_info(&client);
-
-	pthread_exit(NULL);
 }
 
 void *device_pthread(void *arg)
 {
-	struct client_info client =*(struct client_info *)arg;
-	char buf[BUFSIZE];
+	struct client_info *client =*(struct client_info *)arg;
+
 	int ret;
 
-	bzero(buf,BUFSIZE);
-	do{
-		pr_debug("----read starting----\n");
-		ret=read(client.newfd,buf,BUFSIZE-1);
-	}while(ret<0&&EINTR==errno);
-	if(ret<0)
-	{
-		pr_debug("----read error----\n");
-		return;
+	while(1){
+		bzero(buf,BUFSIZE);
+		do{
+			pr_debug("----read starting----\n");
+			ret=read(client->newfd,buf,BUFSIZE-1);
+		}while(ret<0&&EINTR==errno);
+		if(ret<0)
+		{
+			pr_debug("----read error----\n");
+			return;
+		}
+		if(ret==0)
+		{
+			pr_debug ("Client(%s:%d) is exited.", client->cli_ip_addr, ntohs (client->cin.sin_port));
+		}
+		//jie bao shu ju
+		unpack_data(buf,&client);
+		if(client->info_type==DISCONNECT)
+		{
+			close(client->newfd);
+			pthread_exit(NULL);
+			break;
+		}
+
+		//ji xu lianjie
+		if(client->info_type==LINK)
+		{
+			continue;
+		}
+
+		//dengru
+		if(client->)
 	}
-	if(ret==0)
-	{
-		pr_debug ("Client(%s:%d) is exited.", client.cli_ip_addr, ntohs (client.cin.sin_port));
-	}
-	//Ω‚Œˆ ˝æ›
-	unpackage(buf,&client);
-
-	if(client.link==0)
-		pthread_exit(NULL);
-
-	//≈–∂œ–≈œ¢∫Õ¥¶¿Ì–≈œ¢
-	judge_info(&client);
-
 }
 
 
@@ -77,62 +103,71 @@ void SocketLin()
 	pthread_t thread;
 	pthread_t device_thread;
 
-	int flag;//…Ë±∏∫Õ”√ªßµƒ±Íº«£¨flag==0,±Ì æ”√ªß£¨flag==1£¨±Ì æ…Ë±∏
-
-
 
 	char cli_ip_addr[16];
 
-	struct client_info client;
 
 	bzero(client,sizeof(struct client_info));
 	socklen_t cli_len =sizeof (client.cin);
+
+
 	while(1)
 	{
+
+		struct client_info *client;
+		client = (struct client_info*)malloc(sizeof(struct client_info));
+		*client=NULL;
 		//»Ù”–øÕªß¡¨Ω”£¨‘ÚΩ” ‹¡¨Ω”
-		client.newfd=accept (fd, (struct sockaddr *) &(client.cin), &cli_len);
-		if((client.newfd>0)&&(inet_ntop(AF_INET,(void *)&(client.cin.sin_addr),client.cli_ip_addr,sizeof(client.cin))!=NULL))
+		client.newfd=accept (fd, (struct sockaddr *) &(client->cin), &cli_len);
+		if((client->newfd>0)&&(inet_ntop(AF_INET,(void *)&(client->cin.sin_addr),client->cli_ip_addr,sizeof(client->cin))!=NULL))
 		{
-			pr_debug("A new (ip =%s,port =%d) client connected.\n",client.cli_ip_addr,ntohs(client.cin.sin_port));
+			pr_debug("A new (ip =%s,port =%d) client connected.\n",client->cli_ip_addr,ntohs(client->cin.sin_port));
 		}else{
 			pr_debug("inet_ntop() error");
 		}
-		if(client.newfd<0)
+		if(client->newfd<0)
 		{
 			pr_debug("accept error\n");
 			exit(1);
 		}
 
-		°/*±È¿˙ ˝æ›ø‚£¨≤È—Ø «∑Ò¥Ê‘⁄’‚∏ˆIP£¨»Áπ˚¥Ê‘⁄£¨≈–∂œ «∑Ò «…Ë±∏IP£¨»Áπ˚ «
-		   µ•∂¿∏¯…Ë±∏¥¥Ω®“ª∏ˆœﬂ≥Ã£¨”√”⁄”Î…Ë±∏¡¥Ω”
-		  */
-			if(sqlite_select(client.cin.sin_addr,&flag)==0)
+		/*±È¿˙ ˝æ›ø‚£¨≤È—Ø «∑Ò¥Ê‘⁄’‚∏ˆfd£¨»Áπ˚¥Ê‘⁄£¨≈–∂œ «∑Ò «…Ë±∏fd£¨»Áπ˚ «
+			µ•∂¿∏¯…Ë±∏¥¥Ω®“ª∏ˆœﬂ≥Ã£¨”√”⁄”Î…Ë±∏¡¥Ω”
+		 */
+		struct client_info *umsg;
+		umsg = (struct client_info*)malloc(sizeof(struct client_info));
+		*umsg=NULL;
+		search_by_id(table,db,&client.newfd,umsg);
+		if(umsg->newfd==client->newfd)
+		{
+			pr_debug(" This fd exit!\n");
+			if(umsg->flag==1)
 			{
-				pr_debug(" This IP exit!\n");
-				if(flag==1)
+				pr_debug("This fd is device!\n");
+				if(pthread_create(&device_thread,NULL,device_pthread,(void *)client)!=0)
 				{
-					pr_debug("This Ip is device!\n");
-					if(pthread_create(&device_thread,NULL,device_pthread,(void *)&client)!=0)
-					{
-						pr_debug("pthread_create failed!\n");
-						break;
-					}
-					pthread_detach(device_thread);
+					pr_debug("pthread_create failed!\n");
+					continue;
 				}
+				pthread_detach(device_thread);
+				continue;
 			}
+		}
 		//¥¥Ω®“ª∏ˆœﬂ≥Ã”√”⁄¡¥Ω”øÕªß∂À
-		if(pthread_create(&thread,NULL,client_pthread,(void *)&client)!=0)
+		if(pthread_create(&thread,NULL,client_pthread,(void *)client)!=0)
 		{
 			pr_debug("pthread_create failed!\n");d
-				break;
+				continue;
 		}
 		pthread_detach(thread); 
-	}d
+	}
 }
 /*socket ≥ı ºªØ*/
 int SocketInit()
 {
 
+	//¥¥Ω® ˝æ›ø‚
+	create_table(filename,db,table);
 
 	struct sockaddr_in sin;
 	if ((fd = socket (AF_INET, SOCK_STREAM, 0)) < 0) {	/* IPV4 TCPµƒÕ®–≈≥Ã–Ú */
@@ -164,6 +199,7 @@ int SocketInit()
 	}
 	SocketLin();
 
+	close(fd);
 	return 0;
 }
 int main()
@@ -172,15 +208,6 @@ int main()
 		pr_debug("----SocketInit error---\n");
 		return -1;  
 	}  
-	while(1){  
-		sleep(2);  
-	}  
 
-	/*notice to exit*/  
-	isStreamQuit = -1;  
-	sleep(1);  
-	if(gStreamServerFd){  
-		close(gStreamServerFd);  
-	}  
 	pr_debug("SUCCESS in ConnectManageExit\n");  
 }
