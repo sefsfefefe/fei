@@ -1,5 +1,14 @@
-
+#include <unistd.h>
+#include <stdio.h>
 #include <sqlite3.h>
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <stdlib.h>
 
 #define SERV_PORT          9000   //server¼àÌý¶Ë¿Ú
 #define LOG_IN 0  //µÇÈë
@@ -30,14 +39,14 @@ struct client_info{
 	int info_type;
 	int led;//1µãµÆ,0ÃðµÆ	
 
-}
+};
 
 
 
-extern void unpack_data(const char *,struct client_info *);
+extern void unpack_data( char *,struct client_info *);
 extern void insert_task(int ,struct client_info *,char *);
 extern int judge_sqlite(struct client_info *client);
-extern int call_back_usr(int fd£¬char *msg);
+extern int call_back_usr(int fd,char *msg);
 extern int anl_data(struct client_info *client);
 extern void get_client_info_from_sqlite3(char *table_head,char *goal_data,struct client_info *umsg);
 extern int sqlite_callback(void *data,int argc,char **argv,char **azColName);
