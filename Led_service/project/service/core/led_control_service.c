@@ -1,42 +1,83 @@
 
-#include "Debug.h"
+#include "debug.h"
 #include "func.h"
+#include <errno.h>
+#include <pthread.h>
+#include <arpa/inet.h>
 
-
-
+#include "func_declartion.h"
 int fd = -1;
-char *filname="led.db";
-char *table="LEDSQLITE";
-sqlite3 *db;
-char buf[BUFSIZE];
+char buf[BUFSIZ];
+static char *filname=FILNAME;
+static char *table=TABLE;
+static sqlite3 *db;
 int ret=-1;
 
 void *client_pthread(void *arg)
 {
-	struct client_info client =*(struct client_info *)arg;
-	char buf[BUFSIZE];
-
-
+	struct client_info *client =(struct client_info *)arg;
+	char buf[BUFSIZ];
+		
+	pr_debug("(%s:%d)  |client_pthread()\n",__func__,__LINE__);
 	while(1){
-		bzero(buf,BUFSIZE);
+		bzero(buf,BUFSIZ);
 		do{
 			pr_debug("----read starting----\n");
-			ret=read(client.newfd,buf,BUFSIZE-1);
+			ret=read(client->newfd,buf,BUFSIZ-1);
 		}while(ret<0&&EINTR==errno);
 		if(ret<0)
 		{
 			pr_debug("----read error----\n");
-			return;
+			break;
 		}
 		if(ret==0)
 		{
-			pr_debug ("Client(%s:%d) is exited.", client.cli_ip_addr, ntohs (client.cin.sin_port));
+			pr_debug ("Client(%s:%d) not value", client->cli_ip_addr, ntohs (client->cin.sin_port));
+			continue;
 		}
 
 		//解析数据
-		unpack_data(buf,&client);
+		unpack_data(buf,client);
 		//分析数据
-		ret=anl_data(client);
+		ret=anl_data(client,db);
+		if(ret)
+		{
+		  pr_debug("continue to read from client！\n");
+		  continue;
+		}else{
+			close(client->newfd);
+			pthread_exit(NULL);
+			break;
+		}
+		
+	}
+	return NULL;
+
+}
+
+void *device_pthread(void *arg)
+{
+	struct client_info *client =(struct client_info *)arg;
+
+	while(1){
+		bzero(buf,BUFSIZ);
+		do{
+			pr_debug("----read starting----\n");
+			ret=read(client->newfd,buf,BUFSIZ-1);
+		}while(ret<0&&EINTR==errno);
+		if(ret<0)
+		{
+			pr_debug("----read error----\n");
+			break;
+		}
+		if(ret==0)
+		{
+			pr_debug ("Client(%s:%d) is exited.", client->cli_ip_addr, ntohs (client->cin.sin_port));
+		}
+		//解包数据
+		unpack_data(buf,client);
+	
+		ret=anl_data(client,db);
 		if(ret)
 		{
 		  pr_debug("继续循环，等待用户数据！\n");
@@ -44,53 +85,10 @@ void *client_pthread(void *arg)
 		}else{
 			close(client->newfd);
 			pthread_exit(NULL);
-		}
-		
-		
-
-	}
-
-}
-
-void *device_pthread(void *arg)
-{
-	struct client_info *client =*(struct client_info *)arg;
-
-	int ret;
-
-	while(1){
-		bzero(buf,BUFSIZE);
-		do{
-			pr_debug("----read starting----\n");
-			ret=read(client->newfd,buf,BUFSIZE-1);
-		}while(ret<0&&EINTR==errno);
-		if(ret<0)
-		{
-			pr_debug("----read error----\n");
-			return;
-		}
-		if(ret==0)
-		{
-			pr_debug ("Client(%s:%d) is exited.", client->cli_ip_addr, ntohs (client->cin.sin_port));
-		}
-		//jie bao shu ju
-		unpack_data(buf,&client);
-		if(client->info_type==DISCONNECT)
-		{
-			close(client->newfd);
-			pthread_exit(NULL);
 			break;
 		}
-
-		//ji xu lianjie
-		if(client->info_type==LINK)
-		{
-			continue;
 		}
-
-		//dengru
-		if(client->)
-	}
+	return NULL;
 }
 
 
@@ -103,22 +101,18 @@ void SocketLin()
 	pthread_t thread;
 	pthread_t device_thread;
 
-
-	char cli_ip_addr[16];
-
-
-	bzero(client,sizeof(struct client_info));
-	socklen_t cli_len =sizeof (client.cin);
-
-
 	while(1)
 	{
 
 		struct client_info *client;
 		client = (struct client_info*)malloc(sizeof(struct client_info));
-		*client=NULL;
+		if(client==NULL)
+		{
+			pr_debug("malloc error-----(%s:%d)----\n",__func__,__LINE__);
+		}
+		socklen_t cli_len=sizeof(client->cin);
 		//若有客户连接，则接受连接
-		client.newfd=accept (fd, (struct sockaddr *) &(client->cin), &cli_len);
+		client->newfd=accept (fd, (struct sockaddr *) &(client->cin), &cli_len);
 		if((client->newfd>0)&&(inet_ntop(AF_INET,(void *)&(client->cin.sin_addr),client->cli_ip_addr,sizeof(client->cin))!=NULL))
 		{
 			pr_debug("A new (ip =%s,port =%d) client connected.\n",client->cli_ip_addr,ntohs(client->cin.sin_port));
@@ -136,8 +130,12 @@ void SocketLin()
 		 */
 		struct client_info *umsg;
 		umsg = (struct client_info*)malloc(sizeof(struct client_info));
-		*umsg=NULL;
-		search_by_id(table,db,&client.newfd,umsg);
+		if(umsg==NULL)
+		{
+			pr_debug("malloc error!----(%s:%d)--\n",__func__,__LINE__);
+		}
+    pr_debug("----(%s:%d)----\n",__func__,__LINE__);
+		search_by_type(table,db,&(client->newfd),NULL,umsg,filname);
 		if(umsg->newfd==client->newfd)
 		{
 			pr_debug(" This fd exit!\n");
@@ -153,10 +151,11 @@ void SocketLin()
 				continue;
 			}
 		}
+		pr_debug("----(%s:%d)--client_pthread--\n",__func__,__LINE__);
 		//创建一个线程用于链接客户端
 		if(pthread_create(&thread,NULL,client_pthread,(void *)client)!=0)
 		{
-			pr_debug("pthread_create failed!\n");d
+			pr_debug("pthread_create failed!\n");
 				continue;
 		}
 		pthread_detach(thread); 
@@ -165,10 +164,14 @@ void SocketLin()
 /*socket 初始化*/
 int SocketInit()
 {
-
+/*	char *sql;
+	char *errmsg;*/
+	//sql=sqlite3_mprintf("select count(*) form sqlite_master where type='%s'and name='%s'",filname,table);
+//	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK){	
 	//创建数据库
-	create_table(filename,db,table);
-
+  	pr_debug("------(%s:%d)------\n",__func__,__LINE__);
+		create_table(filname,db,table);
+//	}
 	struct sockaddr_in sin;
 	if ((fd = socket (AF_INET, SOCK_STREAM, 0)) < 0) {	/* IPV4 TCP的通信程序 */
 		pr_debug("----socket() error-----\n");
@@ -204,10 +207,12 @@ int SocketInit()
 }
 int main()
 {
+	
 	if(SocketInit() == -1){ 
 		pr_debug("----SocketInit error---\n");
 		return -1;  
 	}  
 
 	pr_debug("SUCCESS in ConnectManageExit\n");  
+	return 0;
 }

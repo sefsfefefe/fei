@@ -1,29 +1,44 @@
 
 #include "../core/func.h"
 #include <errno.h>
+#include "../core/debug.h"
 int main (void)
 {
 	int fd = -1;
 	struct sockaddr_in sin;
 
+	pr_debug("-------%s:%d------\n",__func__,__LINE__);
 
 	struct client_info *client;
-	*client->name="fei";
-	*client->ID="sieei23442";
+	client=(struct client_info*)malloc(sizeof(struct client_info));
+	if(client==NULL)
+		exit(1);
+pr_debug("-------%s:%d------\n",__func__,__LINE__);
+
+	strcpy(client->name,"fei");
+	pr_debug("-------%s:%d------\n",__func__,__LINE__);
+
+	strcpy(client->ID,"sieei23442");
+	pr_debug("-------%s:%d------\n",__func__,__LINE__);
 	client->info_type=LOG_UP;
+	pr_debug("-------%s:%d------\n",__func__,__LINE__);
 	client->flag=0;
+pr_debug("-------%s:%d------\n",__func__,__LINE__);
+
+
 	/* 1.创建套接字fd */
 	if ((fd = socket (AF_INET, SOCK_STREAM, 0)) < 0) {	/* IPV4 TCP的通信程序 */
 		perror ("socket");
 		exit (EXIT_FAILURE);
 	}
-
+	pr_debug("-------%s:%d------\n",__func__,__LINE__);
 	/* 2. 填充sin结构体 */
 	bzero (&sin, sizeof (sin));
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons (9000);
 	sin.sin_addr.s_addr = inet_addr ("192.168.7.47");
-	
+	pr_debug("-------%s:%d------\n",__func__,__LINE__);
+
 	if (connect (fd, (struct sockaddr *) &sin, sizeof (sin)) < 0) {
 		perror ("connect");
 		exit (EXIT_FAILURE);
