@@ -90,7 +90,7 @@ int anl_data(struct client_info *client,sqlite3 *db)
 		{
 			pr_debug("%s:%s --没有注册\n",client->name,client->ID);
 			//存储用户信息到数据库
-			res=insert_data(db,client,table);
+			res=insert_data(db,client,table,filname);
 			if(res==0)
 			{
 				if(call_back_usr(client->newfd,LOGUP_OK)==0)

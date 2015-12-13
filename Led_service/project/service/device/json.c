@@ -1,12 +1,10 @@
-#include "debug.h"
+#include "../core/debug.h"
 #include </usr/local/include/json/json.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include "func.h"
-
-
+#include "../core/func.h"
 
 //Json 打包
 void insert_task(int fd,struct client_info *umsg,char *buf)
@@ -57,9 +55,9 @@ void insert_task(int fd,struct client_info *umsg,char *buf)
 
 void unpack_data( char *buf,struct client_info *umsg)
 {
+	int i;
 	struct json_object *json_bao,*json_client_id,*json_phone_num,*json_name,*json_sex,*json_info_type,*json_flag,*json_led;
-	
-	pr_debug("(%s:%d)|unpack_data()\n",__func__,__LINE__);
+
 	//把字符串转换成JSON对象
 	json_bao=json_tokener_parse(buf);
 	//通过键值获取json成员
@@ -67,42 +65,42 @@ void unpack_data( char *buf,struct client_info *umsg)
 	if(json_client_id!=NULL)
 	{
 		strcpy(umsg->ID,json_object_get_string(json_client_id));
-		pr_debug("----(%s:%d)|ID=%s------\n",__func__,__LINE__,umsg->ID);
+		pr_debug("----(%s:%d):%s------\n",__func__,__LINE__,umsg->ID);
 	}
 	json_phone_num=json_object_object_get(json_bao,"phonenumber");
 	if(json_phone_num!=NULL)
 	{
 		strcpy(umsg->phonenumber,json_object_get_string(json_phone_num));
-		pr_debug("----(%s:%d)|phonenumber=%s------\n",__func__,__LINE__,umsg->phonenumber);
+		pr_debug("----(%s:%d):%s------\n",__func__,__LINE__,umsg->phonenumber);
 	}
 	json_name=json_object_object_get(json_bao,"name");
 	if(json_name!=NULL)
 	{
 		strcpy(umsg->name,json_object_get_string(json_name));
-		pr_debug("----(%s:%d)|name=%s------\n",__func__,__LINE__,umsg->name);
+		pr_debug("----(%s:%d):%s------\n",__func__,__LINE__,umsg->name);
 	}
 	json_sex=json_object_object_get(json_bao,"sex");
 	if(json_sex!=NULL)
 	{
 		strcpy(umsg->sex,json_object_get_string(json_sex));
-		pr_debug("----(%s:%d)|sex=%s------\n",__func__,__LINE__,umsg->sex);
+		pr_debug("----(%s:%d):%s------\n",__func__,__LINE__,umsg->sex);
 	}
 	json_info_type=json_object_object_get(json_bao,"info_type");
 	if(json_info_type!=NULL)
 	{
 		umsg->info_type=json_object_get_int(json_info_type);
-		pr_debug("----(%s:%d)|info_type=%d------\n",__func__,__LINE__,umsg->info_type);
+		pr_debug("----(%s:%d):%d------\n",__func__,__LINE__,umsg->info_type);
 	}
 	json_flag=json_object_object_get(json_bao,"flag");
 	if(json_flag!=NULL)
 	{
 		umsg->flag=json_object_get_int(json_flag);
-		pr_debug("----(%s:%d)|flag=%d------\n",__func__,__LINE__,umsg->flag);
+		pr_debug("----(%s:%d):%d------\n",__func__,__LINE__,umsg->flag);
 	}
 	json_led=json_object_object_get(json_bao,"led");
 	if(json_led!=NULL)
 	{
 		umsg->led=json_object_get_int(json_led);
-		pr_debug("---(%s:%d)|led%d-----\n",__func__,__LINE__,umsg->led);
+		pr_debug("---(%s:%d):%d-----\n",__func__,__LINE__,umsg->led);
 	}
 }

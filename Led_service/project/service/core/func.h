@@ -40,7 +40,7 @@ struct client_info{
 	char name[20];
 	char ID[20];
 	char phonenumber[15];
-	char *sex;//  v 代表女性，o代表男性
+	char sex[1];//  v 代表女性，o代表男性
 	int flag; // 1 代表设备，0代表用户
 	int info_type;
 	int led;//1点灯,0灭灯	

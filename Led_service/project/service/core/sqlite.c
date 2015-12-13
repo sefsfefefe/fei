@@ -71,7 +71,8 @@ int sqlite_callback(void *data,int argc,char **argv,char **azColName)
 //创建一个数据库
 void create_table(char *filename,sqlite3 *db,char *table)
 {
-	char *sql;
+
+  char *sql;
 	int rc;
 	rc=sqlite3_open(filename,&db);
 	if(rc)
@@ -80,7 +81,9 @@ void create_table(char *filename,sqlite3 *db,char *table)
 		sqlite3_close(db);
 	}
 	
-	sql=sqlite3_mprintf("create table if not exists %s (I INT PRIMARY KEY,FD INT,NAME TEXT,ID TEXT,PHONENUMBER TEXT,SEX CHAR,FLAG INT,INFO_TYPE INT);",table);
+	sql=sqlite3_mprintf("create table if not exists %s(FD INT PRIMARY KEY,NAME TEXT,ID TEXT,PHONENUMBER TEXT,SEX TEXT,FLAG INT,INFO_TYPE INT)",table);
+/*char sql[200];
+		sprintf(sql,"create table if not exists %s (I INT PRIMARY KEY AUTOINCREMENT, FD INT,NAME TEXT,ID TEXT,PHONENUMBER TEXT,SEX CHAR,FLAG INT,INFO_TYPE INT);",table);*/
 	
 	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK)
 		{
@@ -93,13 +96,22 @@ void create_table(char *filename,sqlite3 *db,char *table)
 	return;
 }
 //插入数据库
-int insert_data(sqlite3 *db,struct client_info *umsg,char *table)
+int insert_data(sqlite3 *db,struct client_info *umsg,char *table,char *filname)
 {
 		pr_debug("-----(%s:%d)|instert_data()------\n",__func__,__LINE__);
 
 		//打印数据结构的数据
 	//printf_data(umsg);
-		char *sql=sqlite3_mprintf("insert into %s values('%d','%s','%s','%s','%c',%d','%d');",table,umsg->newfd,umsg->name,umsg->ID,umsg->phonenumber,umsg->sex,umsg->flag,umsg->info_type);
+		static int res;
+    res=sqlite3_open(filname,&db);
+	  if(res)
+			{
+			fprintf(stderr,"can't open database %s\n",sqlite3_errmsg(db));
+			sqlite3_close(db);
+			}
+		pr_debug("-----(%s:%d)|instert_data()------\n",__func__,__LINE__);
+
+		char *sql=sqlite3_mprintf("insert into %s values ('%d','%s','%s','%s','%s','%d','%d')",table,umsg->newfd,umsg->name,umsg->ID,umsg->phonenumber,umsg->sex,umsg->flag,umsg->info_type);
 		if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK)
 		{
 				pr_debug("sqlite3_exec\n");
@@ -149,11 +161,19 @@ void upata_data(sqlite3 *db,char *table,struct client_info *umsg)
 }
 
 //打印数据库
-void show_data(sqlite3 *db,char *table)
+void show_data(sqlite3 *db,char *table,char *filname)
 {
 		int i,nrow,ncolum,j,index;
 		char **resultp;
 		char *sql=sqlite3_mprintf("select * from %s",table);
+		
+		static int res;
+    res=sqlite3_open(filname,&db);
+	  if(res)
+			{
+			fprintf(stderr,"can't open database %s\n",sqlite3_errmsg(db));
+			sqlite3_close(db);
+			}
 
 		if(sqlite3_get_table(db,sql,&resultp,&nrow,&ncolum,&errmsg)!=SQLITE_OK)
 		{

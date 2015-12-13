@@ -15,14 +15,14 @@ int main (void)
 		exit(1);
 pr_debug("-------%s:%d------\n",__func__,__LINE__);
 
-	strcpy(client->name,"fei");
+	strcpy(client->name,"taoi");
 	pr_debug("-------%s:%d------\n",__func__,__LINE__);
 
-	strcpy(client->ID,"sieei23442");
+	strcpy(client->ID,"seieei23se2");
 	pr_debug("-------%s:%d------\n",__func__,__LINE__);
 	client->info_type=DISCONNECT;
 	pr_debug("-------%s:%d------\n",__func__,__LINE__);
-	client->flag=0;
+	client->flag=1;
 pr_debug("-------%s:%d------\n",__func__,__LINE__);
 
 
